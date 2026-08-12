@@ -204,8 +204,8 @@
       currentUser.photo_url = RANDOM_AVATARS[hash % 20];
     }
 
-    // Keyubu VPS Sunucu Baglantisi
-    const socket = io("http://45.143.11.148:3000", { autoConnect: true });
+    // Keyubu VPS Sunucu SSL Baglantisi (Caddy / sslip.io HTTPS)
+    const socket = io("https://45.143.11.148.sslip.io", { autoConnect: true });
 
     let currentRoom = null;
     let isMuted = true;
