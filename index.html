@@ -2,461 +2,576 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Cesi Tayfa Voice App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cesi Tayfa Sesli Odalar</title>
+  
+  <!-- Telegram WebApp & Socket.io SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Socket.io for Realtime Sync -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
   <style>
-    :root {
-      --bg-color: #f0f2f5;
-      --primary: #0088cc;
-      --card-pink: linear-gradient(135deg, #ff4b8b, #ff758c);
-      --card-purple: linear-gradient(135deg, #9b51e0, #7000ff);
-      --card-orange: linear-gradient(135deg, #ff8c00, #ff5252);
-      --card-blue: linear-gradient(135deg, #00c6ff, #0072ff);
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
     }
 
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; padding: 0; background-color: #0f172a; color: #fff; overflow-x: hidden; }
+    body {
+      background-color: #0b141d;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-    /* Header Tab Area */
-    .app-header { background: #1e293b; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #334155; }
-    .tabs { display: flex; gap: 8px; width: 100%; }
-    .tab-btn { flex: 1; padding: 10px; border: none; background: #334155; color: #94a3b8; border-radius: 12px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
-    .tab-btn.active { background: #0088cc; color: white; }
+    .container {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
 
-    .container { padding: 16px; padding-bottom: 90px; }
+    /* Sekme Menüsü (Grup / Özel) */
+    .tabs {
+      display: flex;
+      background: #17212b;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
 
-    /* Create Room Card */
-    .create-room-btn-card { background: var(--card-blue); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; font-size: 16px; margin-bottom: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3); }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: #7f91a4;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-    /* Room Cards (BlindID Style) */
-    .room-card { border-radius: 20px; padding: 16px; margin-bottom: 16px; color: white; position: relative; box-shadow: 0 8px 20px rgba(0,0,0,0.2); transition: transform 0.2s; cursor: pointer; }
-    .room-card:active { transform: scale(0.98); }
-    .room-card.bg-pink { background: var(--card-pink); }
-    .room-card.bg-purple { background: var(--card-purple); }
-    .room-card.bg-orange { background: var(--card-orange); }
-    .room-card.bg-blue { background: var(--card-blue); }
+    .tab-btn.active {
+      background: #2b5278;
+      color: #ffffff;
+    }
 
-    .room-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .room-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-    .room-category { font-size: 12px; opacity: 0.85; font-weight: 600; }
-    .room-stats { display: flex; gap: 12px; font-size: 13px; font-weight: bold; }
+    /* Ana Buton */
+    .create-btn {
+      width: 100%;
+      padding: 14px;
+      background: #0088cc;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+      margin-bottom: 20px;
+    }
 
-    .room-avatars { display: flex; align-items: center; margin-top: 14px; gap: 6px; }
-    .room-avatar-img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); object-fit: cover; background: #fff; }
+    .create-btn:active {
+      transform: scale(0.98);
+    }
 
-    .room-speakers-list { font-size: 12px; margin-top: 8px; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Oda Kartları */
+    .rooms-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-    /* VOICE ROOM INSIDE VIEW */
-    .voice-room-view { display: none; position: fixed; inset: 0; background: #0b1120; z-index: 1000; flex-direction: column; }
-    .voice-room-view.active { display: flex; }
+    .empty-state {
+      text-align: center;
+      color: #6c7883;
+      margin-top: 60px;
+      font-size: 15px;
+    }
 
-    .room-top-bar { padding: 16px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
-    .room-info-title { font-size: 16px; font-weight: bold; }
-    .leave-btn { background: #ef4444; border: none; color: white; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .room-card {
+      background: #17212b;
+      padding: 16px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #242f3d;
+      cursor: pointer;
+    }
 
-    /* Slots Grid */
-    .slots-grid { flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 16px; overflow-y: auto; }
-    .slot-card { background: #1e293b; border-radius: 20px; border: 1px solid #334155; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; height: 180px; }
-    .slot-card.speaking { border: 2px solid #22c55e; box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
-    .slot-avatar { width: 75px; height: 75px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid #38bdf8; }
-    .slot-name { font-size: 14px; font-weight: bold; max-width: 100px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .slot-badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); font-size: 10px; padding: 2px 6px; border-radius: 8px; }
-    .slot-menu-trigger { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
+    .room-info h4 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
 
-    .empty-slot { background: rgba(30, 41, 59, 0.4); border: 2px dashed #334155; color: #64748b; cursor: pointer; }
-    .empty-slot-plus { font-size: 32px; font-weight: 300; }
+    .room-info p {
+      font-size: 13px;
+      color: #6c7883;
+    }
 
-    /* Bottom Control Bar */
-    .room-bottom-bar { padding: 12px 16px; background: #1e293b; display: flex; align-items: center; justify-content: space-around; border-top: 1px solid #334155; }
-    .control-btn { width: 50px; height: 50px; border-radius: 50%; border: none; background: #334155; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    .control-btn.active { background: #22c55e; }
-    .control-btn.muted { background: #ef4444; }
+    .room-badge {
+      background: #242f3d;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #0088cc;
+      font-weight: 600;
+    }
 
-    /* Popup Modal */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: flex-end; }
-    .modal.active { display: flex; }
-    .modal-content { background: #1e293b; width: 100%; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; animation: slideUp 0.3s ease; }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    /* Modallar */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
 
-    .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; text-align: center; }
-    .input-group { margin-bottom: 14px; }
-    .input-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
-    .input-group input, .input-group select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 14px; }
+    .modal {
+      background: #17212b;
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      max-width: 360px;
+      border: 1px solid #242f3d;
+    }
 
-    .action-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #0088cc; color: white; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 8px; }
-    .action-btn.danger { background: #ef4444; }
+    .modal h3 {
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
 
-    /* Action Sheet Menu for User Options */
-    .menu-item { width: 100%; padding: 14px; text-align: left; background: none; border: none; border-bottom: 1px solid #334155; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
-    .menu-item:last-child { border: none; }
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #7f91a4;
+      margin-bottom: 6px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      background: #0e1621;
+      border: 1px solid #242f3d;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-cancel { background: #242f3d; color: white; }
+    .btn-submit { background: #0088cc; color: white; }
+
+    /* Aktif Oda Ekranı */
+    .room-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .room-header {
+      padding: 16px;
+      background: #17212b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .slot-card {
+      background: #17212b;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border: 1px dashed #242f3d;
+      min-height: 120px;
+      cursor: pointer;
+    }
+
+    .slot-card.filled {
+      border: 1px solid #2b5278;
+    }
+
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #2b5278;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .room-controls {
+      padding: 16px;
+      background: #17212b;
+      display: flex;
+      gap: 12px;
+    }
+
+    .ctrl-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: #242f3d;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ctrl-btn.danger { background: #e53935; }
+    .ctrl-btn.active { background: #0088cc; }
+
+    /* Sohbet Penceresi */
+    .chat-messages {
+      height: 200px;
+      overflow-y: auto;
+      background: #0e1621;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-msg {
+      font-size: 13px;
+    }
+
+    .chat-msg .sender {
+      color: #0088cc;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
 
-  <!-- App Header -->
-  <div class="app-header">
+  <!-- ODA LİSTESİ SAYFASI -->
+  <div id="mainPage" class="container">
     <div class="tabs">
-      <button class="tab-btn active">Grup Odaları</button>
-      <button class="tab-btn">Özel Odalar</button>
+      <button id="tabGroup" class="tab-btn active">Grup Odaları</button>
+      <button id="tabPrivate" class="tab-btn">Özel Odalar</button>
+    </div>
+
+    <button id="btnOpenCreateModal" class="create-btn">+ Oda Oluştur</button>
+
+    <div id="roomsList" class="rooms-list">
+      <div class="empty-state">Henüz aktif sesli oda yok.</div>
     </div>
   </div>
 
-  <!-- Main Container -->
-  <div class="container">
-    <!-- Oda Yarat Butonu -->
-    <div class="create-room-btn-card" onclick="openCreateRoomModal()">
-      <span style="font-size: 22px;">+</span>
-      <span>Özel Oda Yarat</span>
-    </div>
-
-    <!-- Live Rooms List -->
-    <div id="rooms-list">
-      <!-- Odalar dinamik yüklenecek -->
-    </div>
-  </div>
-
-  <!-- VOICE ROOM FULL SCREEN VIEW -->
-  <div class="voice-room-view" id="voice-room-view">
-    <div class="room-top-bar">
+  <!-- AKTİF ODA SAYFASI -->
+  <div id="roomPage" class="room-view">
+    <div class="room-header">
       <div>
-        <div class="room-info-title" id="active-room-title">Oda Başlığı</div>
-        <div style="font-size: 11px; color: #94a3b8;" id="active-room-cat">Ortaya Karışık</div>
+        <h3 id="activeRoomTitle">Oda Başlığı</h3>
+        <span id="activeRoomType" style="font-size:12px; color:#7f91a4;">Grup Odası</span>
       </div>
-      <button class="leave-btn" onclick="leaveRoom()">Ayrıl</button>
+      <button onclick="leaveRoom()" class="ctrl-btn danger" style="flex:none; padding:8px 16px;">Ayrıl</button>
     </div>
 
-    <!-- Slots Grid -->
-    <div class="slots-grid" id="slots-container">
-      <!-- Slotlar dinamik oluşturulacak -->
-    </div>
+    <div id="slotsContainer" class="slots-grid"></div>
 
-    <!-- Bottom Controls -->
-    <div class="room-bottom-bar">
-      <button class="control-btn muted" id="mic-btn" onclick="toggleMic()">🎤</button>
-      <button class="control-btn" id="share-btn" onclick="shareRoom()">🔗</button>
-      <button class="control-btn" onclick="toggleChatModal()">💬</button>
+    <div class="room-controls">
+      <button id="btnToggleMic" onclick="toggleMic()" class="ctrl-btn">🎤 Mikrofon Kapalı</button>
+      <button onclick="openChatModal()" class="ctrl-btn">💬 Sohbet</button>
     </div>
   </div>
 
-  <!-- MODAL: Oda Oluşturma -->
-  <div class="modal" id="create-room-modal">
-    <div class="modal-content">
-      <div class="modal-title">Yeni Oda Oluştur</div>
-      <div class="input-group">
-        <label>Oda Adı</label>
-        <input type="text" id="new-room-title" placeholder="Örn: Sohbet Muhabbet">
+  <!-- MODAL: ODA OLUŞTUR -->
+  <div id="createRoomModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Oda Oluştur</h3>
+      <div class="form-group">
+        <label>Oda Başlığı</label>
+        <input type="text" id="inputRoomTitle" placeholder="Örn: Muhabbet Odası">
       </div>
-      <div class="input-group">
-        <label>Kategori Seçimi</label>
-        <select id="new-room-category">
-          <option value="Ortaya Karışık">Ortaya Karışık</option>
-          <option value="Şarkı Söyle">Şarkı Söyle</option>
-          <option value="Tanışalım">Tanışalım</option>
-          <option value="İlişkiler">İlişkiler</option>
-          <option value="Derdini Anlat">Derdini Anlat</option>
+      <div class="form-group">
+        <label>Oda Türü</label>
+        <select id="selectRoomType">
+          <option value="false">Grup Odası</option>
+          <option value="true">Özel Oda</option>
         </select>
       </div>
-      <div class="input-group">
-        <label>Koltuk Sayısı</label>
-        <select id="new-room-capacity">
+      <div class="form-group">
+        <label>Koltuk Kapasitesi</label>
+        <select id="selectCapacity">
           <option value="4">4 Kişilik</option>
           <option value="6">6 Kişilik</option>
+          <option value="8">8 Kişilik</option>
         </select>
       </div>
-      <button class="action-btn" onclick="submitCreateRoom()">Odayı Başlat</button>
-      <button class="action-btn danger" style="margin-top:8px; background: transparent; border:1px solid #334155;" onclick="closeModal('create-room-modal')">İptal</button>
+      <div class="modal-actions">
+        <button onclick="closeCreateModal()" class="btn-cancel">İptal</button>
+        <button onclick="submitCreateRoom()" class="btn-submit">Oluştur</button>
+      </div>
     </div>
   </div>
 
-  <!-- MODAL: Kullanıcı Yönetim Menüsü (Yönetici Seçenekleri) -->
-  <div class="modal" id="user-menu-modal">
-    <div class="modal-content">
-      <div class="modal-title" id="selected-user-name">Kullanıcı İşlemleri</div>
-      <div id="user-action-options">
-        <!-- Yetkilere göre dinamik dolacak -->
+  <!-- MODAL: SOHBET -->
+  <div id="chatModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Oda Sohbeti</h3>
+      <div id="chatBox" class="chat-messages"></div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="inputChatText" placeholder="Mesaj yazın..." style="flex:1; padding:8px; background:#0e1621; border:1px solid #242f3d; color:white; border-radius:6px;">
+        <button onclick="sendChatMessage()" class="btn-submit" style="padding:8px 14px; flex:none;">Gönder</button>
       </div>
-      <button class="action-btn danger" style="margin-top:12px;" onclick="closeModal('user-menu-modal')">Kapat</button>
+      <button onclick="closeChatModal()" class="btn-cancel" style="width:100%; margin-top:10px;">Kapat</button>
     </div>
   </div>
 
   <script>
-    // --- TELEGRAM & SYSTEM INITIALIZATION ---
-    const SUPER_ADMIN_ID = "5912932761";
-    let tg = window.Telegram ? window.Telegram.WebApp : null;
-    if(tg) { tg.ready(); tg.expand(); }
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.ready();
 
-    // User State
-    let currentUser = {
-      id: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? String(tg.initDataUnsafe.user.id) : "5912932761",
-      first_name: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.first_name : "ALonDe35",
-      photo_url: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.photo_url : null
+    // Kullanıcı bilgileri (Telegram WebApp veya varsayılan)
+    const currentUser = {
+      id: tg?.initDataUnsafe?.user?.id?.toString() || "5912932761",
+      first_name: tg?.initDataUnsafe?.user?.first_name || "Kullanıcı"
     };
 
-    // Random Avatar Selector (20 Preset Avatars)
-    const RANDOM_AVATARS = Array.from({length: 20}, (_, i) => `https://api.dicebear.com/7.x/bottts/svg?seed=Avatar${i+1}`);
-    if (!currentUser.photo_url) {
-      // Pick random avatar deterministically using User ID
-      let hash = 0;
-      for (let i = 0; i < currentUser.id.length; i++) hash += currentUser.id.charCodeAt(i);
-      currentUser.photo_url = RANDOM_AVATARS[hash % 20];
-    }
+    // Socket.io Bağlantısı
+    const socket = io("https://45.143.11.148.sslip.io", {
+      transports: ["websocket", "polling"]
+    });
 
-    // Keyubu VPS Sunucu SSL Baglantisi (Caddy / sslip.io HTTPS)
-    const socket = io("https://45.143.11.148.sslip.io", { autoConnect: true });
-
-    let currentRoom = null;
+    let currentTab = 'group'; // 'group' veya 'private'
+    let allRooms = [];
+    let currentActiveRoom = null;
     let isMuted = true;
-    let selectedTargetUser = null;
 
-    // Local Authorized Users Cache
-    let authorizedCreators = [SUPER_ADMIN_ID];
-
-    // Colors per category
-    const categoryColors = {
-      "Ortaya Karışık": "bg-pink",
-      "Şarkı Söyle": "bg-orange",
-      "Tanışalım": "bg-purple",
-      "İlişkiler": "bg-pink",
-      "Derdini Anlat": "bg-blue"
-    };
-
-    // Socket Events
     socket.on("connect", () => {
       socket.emit("register_user", currentUser);
     });
 
+    // Sekme Geçişleri
+    document.getElementById('tabGroup').onclick = () => {
+      currentTab = 'group';
+      document.getElementById('tabGroup').classList.add('active');
+      document.getElementById('tabPrivate').classList.remove('active');
+      renderRoomsList();
+    };
+
+    document.getElementById('tabPrivate').onclick = () => {
+      currentTab = 'private';
+      document.getElementById('tabPrivate').classList.add('active');
+      document.getElementById('tabGroup').classList.remove('active');
+      renderRoomsList();
+    };
+
+    // Sunucudan Odalar Geldikçe Listeyi Yenile
     socket.on("rooms_update", (rooms) => {
-      renderRoomsList(rooms);
+      allRooms = rooms;
+      renderRoomsList();
     });
 
-    socket.on("room_detail_update", (room) => {
-      if (currentRoom && currentRoom.id === room.id) {
-        currentRoom = room;
-        renderActiveRoom();
-      }
-    });
+    function renderRoomsList() {
+      const container = document.getElementById('roomsList');
+      const filtered = allRooms.filter(r => currentTab === 'private' ? r.isPrivate : !r.isPrivate);
 
-    socket.on("permission_updated", (data) => {
-      if(data.type === "creator_access") {
-        if(!authorizedCreators.includes(data.userId)) authorizedCreators.push(data.userId);
-        alert("Oda oluşturma yetkiniz güncellendi!");
-      }
-    });
-
-    // --- UI RENDERING ---
-    function renderRoomsList(rooms) {
-      const container = document.getElementById("rooms-list");
-      container.innerHTML = "";
-
-      if(rooms.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:#64748b; padding:40px;">Henüz aktif sesli oda yok.</div>`;
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">Henüz aktif sesli oda yok.</div>';
         return;
       }
 
-      rooms.forEach(room => {
-        const bgClass = categoryColors[room.category] || "bg-blue";
-        const speakersText = room.slots.filter(s => s.user).map(s => s.user.first_name).join(", ") || "Kimse yok";
-        
-        let avatarImgs = room.slots.filter(s => s.user).map(s => `<img src="${s.user.photo_url}" class="room-avatar-img">`).join("");
-
-        const card = document.createElement("div");
-        card.className = `room-card ${bgClass}`;
-        card.onclick = () => joinRoom(room.id);
-        card.innerHTML = `
-          <div class="room-header">
-            <div>
-              <div class="room-title">${room.title}</div>
-              <div class="room-category">(${room.category})</div>
-            </div>
-            <div class="room-stats">
-              <span>👥 ${room.slots.filter(s => s.user).length}</span>
-              <span>🎙️ ${room.slots.filter(s => s.user && !s.isMuted).length}</span>
-            </div>
+      container.innerHTML = filtered.map(room => `
+        <div class="room-card" onclick="joinRoom('${room.id}')">
+          <div class="room-info">
+            <h4>${room.title}</h4>
+            <p>${room.isPrivate ? '🔒 Özel Oda' : '👥 Grup Odası'}</p>
           </div>
-          <div class="room-avatars">${avatarImgs}</div>
-          <div class="room-speakers-list">${speakersText}</div>
-        `;
-        container.appendChild(card);
-      });
+          <div class="room-badge">${room.slots.filter(s => s.user).length} / ${room.capacity}</div>
+        </div>
+      `).join('');
     }
 
-    function renderActiveRoom() {
-      if(!currentRoom) return;
-      document.getElementById("active-room-title").innerText = currentRoom.title;
-      document.getElementById("active-room-cat").innerText = currentRoom.category;
+    // Modal İşlemleri
+    document.getElementById('btnOpenCreateModal').onclick = () => {
+      document.getElementById('createRoomModal').style.display = 'flex';
+    };
 
-      const container = document.getElementById("slots-container");
-      container.innerHTML = "";
-
-      currentRoom.slots.forEach((slot, index) => {
-        const slotEl = document.createElement("div");
-
-        if (slot.user) {
-          const isUserAdmin = slot.user.id === SUPER_ADMIN_ID;
-          const isMod = currentRoom.moderators.includes(slot.user.id);
-          const isSpeaking = !slot.isMuted;
-
-          slotEl.className = `slot-card ${isSpeaking ? 'speaking' : ''}`;
-          slotEl.innerHTML = `
-            ${isUserAdmin ? '<span class="slot-badge" style="background:#eab308; color:#000;">KURUCU</span>' : (isMod ? '<span class="slot-badge" style="background:#3b82f6;">MOD</span>' : '')}
-            <button class="slot-menu-trigger" onclick="openUserMenu('${slot.user.id}', '${slot.user.first_name}', event)">•••</button>
-            <img src="${slot.user.photo_url}" class="slot-avatar">
-            <div class="slot-name">${slot.user.first_name}</div>
-            <div style="font-size:12px; margin-top:4px;">${slot.isMuted ? '🔇' : '🎙️'}</div>
-          `;
-        } else {
-          slotEl.className = "slot-card empty-slot";
-          slotEl.onclick = () => takeSlot(index);
-          slotEl.innerHTML = `
-            <div class="empty-slot-plus">+</div>
-            <div style="font-size:12px; font-weight:bold;">Sohbete Katıl</div>
-          `;
-        }
-        container.appendChild(slotEl);
-      });
-    }
-
-    // --- ROOM ACTIONS ---
-    function openCreateRoomModal() {
-      // Permission Check: Super Admin OR Authorized Users
-      if(currentUser.id !== SUPER_ADMIN_ID && !authorizedCreators.includes(currentUser.id)) {
-        alert("Üzgünüz, yalnızca Yetkili Kişiler oda açabilir!");
-        return;
-      }
-      document.getElementById("create-room-modal").classList.add("active");
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.remove("active");
+    function closeCreateModal() {
+      document.getElementById('createRoomModal').style.display = 'none';
     }
 
     function submitCreateRoom() {
-      const title = document.getElementById("new-room-title").value.trim();
-      const category = document.getElementById("new-room-category").value;
-      const capacity = parseInt(document.getElementById("new-room-capacity").value);
+      const title = document.getElementById('inputRoomTitle').value.trim();
+      const isPrivate = document.getElementById('selectRoomType').value === 'true';
+      const capacity = parseInt(document.getElementById('selectCapacity').value);
 
-      if(!title) { alert("Lütfen oda adı girin."); return; }
+      socket.emit("create_room", {
+        title: title || (isPrivate ? "Özel Oda" : "Grup Odası"),
+        capacity: capacity,
+        isPrivate: isPrivate,
+        creator: currentUser
+      });
 
-      socket.emit("create_room", { title, category, capacity, creator: currentUser });
-      closeModal("create-room-modal");
+      closeCreateModal();
     }
 
+    // Odaya Katılma
     function joinRoom(roomId) {
-      socket.emit("join_room", { roomId, user: currentUser }, (response) => {
-        if(response.success) {
-          currentRoom = response.room;
-          document.getElementById("voice-room-view").classList.add("active");
-          renderActiveRoom();
-        } else {
-          alert(response.message);
+      socket.emit("join_room", { roomId, user: currentUser }, (res) => {
+        if (res.success) {
+          currentActiveRoom = res.room;
+          openRoomView();
         }
+      });
+    }
+
+    // Detay Güncellemeleri
+    socket.on("room_detail_update", (room) => {
+      if (currentActiveRoom && currentActiveRoom.id === room.id) {
+        currentActiveRoom = room;
+        updateRoomUI();
+      }
+    });
+
+    function openRoomView() {
+      document.getElementById('mainPage').style.display = 'none';
+      document.getElementById('roomPage').style.display = 'flex';
+      updateRoomUI();
+    }
+
+    function updateRoomUI() {
+      if (!currentActiveRoom) return;
+
+      document.getElementById('activeRoomTitle').innerText = currentActiveRoom.title;
+      document.getElementById('activeRoomType').innerText = currentActiveRoom.isPrivate ? '🔒 Özel Oda' : '👥 Grup Odası';
+
+      const slotsContainer = document.getElementById('slotsContainer');
+      slotsContainer.innerHTML = currentActiveRoom.slots.map((slot, index) => {
+        if (slot.user) {
+          return `
+            <div class="slot-card filled">
+              <div class="avatar">${slot.user.first_name[0]}</div>
+              <div style="font-size:13px; font-weight:600;">${slot.user.first_name}</div>
+              <div style="font-size:11px; color:#7f91a4;">${slot.isMuted ? '🔇 Mute' : '🎙️ Açık'}</div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="slot-card" onclick="takeSlot(${index})">
+              <div style="font-size:24px; color:#242f3d;">+</div>
+              <div style="font-size:12px; color:#6c7883;">Koltuk Geç</div>
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    function takeSlot(index) {
+      if (!currentActiveRoom) return;
+      socket.emit("take_slot", {
+        roomId: currentActiveRoom.id,
+        slotIndex: index,
+        user: currentUser
+      });
+    }
+
+    function toggleMic() {
+      if (!currentActiveRoom) return;
+      isMuted = !isMuted;
+      const btn = document.getElementById('btnToggleMic');
+      btn.innerText = isMuted ? '🎤 Mikrofon Kapalı' : '🎙️ Mikrofon Açık';
+      btn.classList.toggle('active', !isMuted);
+
+      socket.emit("toggle_mic", {
+        roomId: currentActiveRoom.id,
+        userId: currentUser.id,
+        isMuted: isMuted
       });
     }
 
     function leaveRoom() {
-      if(currentRoom) {
-        socket.emit("leave_room", { roomId: currentRoom.id, userId: currentUser.id });
-        currentRoom = null;
-        document.getElementById("voice-room-view").classList.remove("active");
-      }
+      if (!currentActiveRoom) return;
+      socket.emit("leave_room", {
+        roomId: currentActiveRoom.id,
+        userId: currentUser.id
+      });
+
+      currentActiveRoom = null;
+      document.getElementById('roomPage').style.display = 'none';
+      document.getElementById('mainPage').style.display = 'flex';
     }
 
-    function takeSlot(index) {
-      socket.emit("take_slot", { roomId: currentRoom.id, slotIndex: index, user: currentUser });
+    // Sohbet Modalı
+    function openChatModal() {
+      document.getElementById('chatModal').style.display = 'flex';
     }
 
-    function toggleMic() {
-      isMuted = !isMuted;
-      const btn = document.getElementById("mic-btn");
-      if(isMuted) {
-        btn.className = "control-btn muted";
-        btn.innerText = "🔇";
-      } else {
-        btn.className = "control-btn active";
-        btn.innerText = "🎙️";
-      }
-      socket.emit("toggle_mic", { roomId: currentRoom.id, userId: currentUser.id, isMuted });
+    function closeChatModal() {
+      document.getElementById('chatModal').style.display = 'none';
     }
 
-    // --- MANAGEMENT & MODERATION MENU ---
-    function openUserMenu(targetUserId, targetName, e) {
-      e.stopPropagation();
-      selectedTargetUser = { id: targetUserId, name: targetName };
+    function sendChatMessage() {
+      const input = document.getElementById('inputChatText');
+      const text = input.value.trim();
+      if (!text || !currentActiveRoom) return;
 
-      const isMeSuperAdmin = currentUser.id === SUPER_ADMIN_ID;
-      const isMeMod = currentRoom && currentRoom.moderators.includes(currentUser.id);
+      socket.emit("send_chat_message", {
+        roomId: currentActiveRoom.id,
+        sender: currentUser,
+        text: text
+      });
 
-      document.getElementById("selected-user-name").innerText = targetName;
-      const optionsContainer = document.getElementById("user-action-options");
-      optionsContainer.innerHTML = "";
-
-      if (isMeSuperAdmin || isMeMod) {
-        // Option 1: Mod Yap / Modluk Al
-        const isTargetMod = currentRoom.moderators.includes(targetUserId);
-        optionsContainer.innerHTML += `
-          <button class="menu-item" onclick="toggleModPermission('${targetUserId}')">
-            ${isTargetMod ? '🛡️ Mod Yetkisini Al' : '⭐ Mod Yap'}
-          </button>
-        `;
-
-        // Option 2: Oda Açma Yetkisi Ver (Sadece Ana Yönetici Yapabilir)
-        if (isMeSuperAdmin) {
-          optionsContainer.innerHTML += `
-            <button class="menu-item" onclick="grantCreatePermission('${targetUserId}')">
-              🔑 Oda Açma Yetkisi Ver / Kaldır
-            </button>
-          `;
-        }
-
-        // Option 3: Sessize Al
-        optionsContainer.innerHTML += `
-          <button class="menu-item" onclick="muteTargetUser('${targetUserId}')">
-            🔇 Mikrofona Müdahale Et (Sustur)
-          </button>
-        `;
-
-        // Option 4: Odadan At
-        optionsContainer.innerHTML += `
-          <button class="menu-item" style="color:#ef4444;" onclick="kickTargetUser('${targetUserId}')">
-            🚫 Odadan At (Kick)
-          </button>
-        `;
-      } else {
-        optionsContainer.innerHTML = `<div style="padding:10px; color:#94a3b8;">Sadece yönetici ve modlar işlem yapabilir.</div>`;
-      }
-
-      document.getElementById("user-menu-modal").classList.add("active");
+      input.value = '';
     }
 
-    function toggleModPermission(targetUserId) {
-      socket.emit("toggle_mod", { roomId: currentRoom.id, targetUserId, adminId: currentUser.id });
-      closeModal("user-menu-modal");
-    }
-
-    function grantCreatePermission(targetUserId) {
-      socket.emit("grant_creator_permission", { targetUserId, superAdminId: currentUser.id });
-      alert("Kullanıcıya yetki tanımlandı!");
-      closeModal("user-menu-modal");
-    }
-
-    function muteTargetUser(targetUserId) {
-      socket.emit("admin_mute_user", { roomId: currentRoom.id, targetUserId });
-      closeModal("user-menu-modal");
-    }
-
-    function kickTargetUser(targetUserId) {
-      socket.emit("kick_user", { roomId: currentRoom.id, targetUserId });
-      closeModal("user-menu-modal");
-    }
-
-    function shareRoom() {
-      if(tg && tg.openTelegramLink) {
-        tg.openTelegramLink(`https://t.me/share/url?url=https://t.me/your_bot?startapp=room_${currentRoom.id}&text=Katıl: ${currentRoom.title}`);
-      }
-    }
+    socket.on("new_chat_message", (msg) => {
+      const chatBox = document.getElementById('chatBox');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-msg';
+      msgDiv.innerHTML = `<span class="sender">${msg.senderName}:</span> ${msg.text}`;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
   </script>
 </body>
 </html>
